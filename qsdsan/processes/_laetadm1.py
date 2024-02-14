@@ -91,7 +91,7 @@ def create_laetadm1_cmps(set_thermo=True):
     S_aa.i_N = 0.007 * N_mw
     S_aa.i_P = 0
     S_aa.i_C = 0.03 * C_mw
-
+fxgfg
     S_fa = Component.from_chemical('S_fa', chemical='palmitate',
                                     description='Total long-chain fatty acids',
                                     measured_as='COD',
