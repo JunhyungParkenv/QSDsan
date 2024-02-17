@@ -26,7 +26,7 @@ __all__ = ('create_laetadm1_cmps', 'ADM1',
            'non_compet_inhibit', 'substr_inhibit',
            'T_correction_factor', 
            'pH_inhibit', 'Hill_inhibit', 
-           'rhos_laetadm1')
+           'rhos_adm1')
 
 _path = ospath.join(data_path, 'process_data/_laetadm1.tsv')
 _load_components = settings.get_default_chemicals
@@ -85,13 +85,13 @@ def create_laetadm1_cmps(set_thermo=True):
     # S_su = cmps_all.S_F.copy('S_su')
     # S_su.i_N = 0
     # S_su.i_C = 0.0313 * 12
-    
+
     # varies
     S_aa = cmps_all.S_F.copy('S_aa')
     S_aa.i_N = 0.007 * N_mw
     S_aa.i_P = 0
     S_aa.i_C = 0.03 * C_mw
-    
+
     S_fa = Component.from_chemical('S_fa', chemical='palmitate',
                                     description='Total long-chain fatty acids',
                                     measured_as='COD',
@@ -151,7 +151,7 @@ def create_laetadm1_cmps(set_thermo=True):
 
     X_su = cmps_all.X_FO.copy('X_su')
     X_su.description = 'Biomass uptaking sugars'
-    
+
     X_aa = cmps_all.X_FO.copy('X_aa')
     X_aa.description = 'Biomass uptaking amino acids'
 
@@ -182,17 +182,16 @@ def create_laetadm1_cmps(set_thermo=True):
     S_cat = cmps_all.S_CAT.copy('S_cat')
     S_an = cmps_all.S_AN.copy('S_an')
     S_cat.i_mass = S_an.i_mass = 1
-    
-    #Add 락테이트와 에탄올 in Components
-    cmps_laetadm1 = Components([S_su, S_aa, S_fa, S_la, S_et, S_va, S_bu, S_pro, S_ac, S_h2,
-                            S_ch4, S_IC, S_IN, S_I, X_c, X_ch, X_pr, X_li,
-                            X_su, X_aa, X_fa, X_la, X_et, X_c4, X_pro, X_ac, X_h2, X_I,
-                            S_cat, S_an, cmps_all.H2O])
-    cmps_laetadm1.default_compile()
-    if set_thermo: settings.set_thermo(cmps_laetadm1)
-    return cmps_laetadm1
 
-# create_laetadm1_cmps()
+    cmps_adm1 = Components([S_su, S_aa, S_fa, S_la, S_et, S_va, S_bu, S_pro, S_ac, S_h2,
+                            S_ch4, S_IC, S_IN, S_I, X_c, X_ch, X_pr, X_li,
+                            X_su, X_aa, X_fa, X_c4, X_pro, X_ac, X_h2, X_I,
+                            S_cat, S_an, cmps_all.H2O])
+    cmps_adm1.default_compile()
+    if set_thermo: settings.set_thermo(cmps_adm1)
+    return cmps_adm1
+
+# create_adm1_cmps()
 
 
 #%%
@@ -224,26 +223,24 @@ def T_correction_factor(T1, T2, delta_H):
 # def calc_Kas(pKas, T_base, T_op, theta):
 #     pKas = np.asarray(pKas)
 #     return 10**(-pKas) * T_correction_factor(T_base, T_op, theta)
-    
+
 def acid_base_rxn(h_ion, weak_acids_tot, Kas):
     # 락테이트 추가
-    # h, nh4, hco3, ac, pr, bu, va, la = mols
-    # S_cat, S_an, S_IN, S_IC, S_ac, S_pro, S_bu, S_va, S_la = weak_acids_tot  # in M
+    # h, nh4, hco3, ac, pr, bu, va = mols
+    # S_cat, S_an, S_IN, S_IC, S_ac, S_pro, S_bu, S_va = weak_acids_tot  # in M
     S_cat, S_an, S_IN = weak_acids_tot[:3]
     # Kw, Ka_nh, Ka_co2, Ka_ac, Ka_pr, Ka_bu, Ka_va, Ka_la = Kas
     Kw = Kas[0]
     oh_ion = Kw/h_ion
-    nh3, hco3, ac, pro, bu, va, la = Kas[1:] * weak_acids_tot[2:] / (Kas[1:] + h_ion) #la 포함
-    # 락테이트 포함
+    nh3, hco3, ac, pro, bu, va, la = Kas[1:] * weak_acids_tot[2:] / (Kas[1:] + h_ion)
     return S_cat + h_ion + (S_IN - nh3) - S_an - oh_ion - hco3 - ac - pro - bu - va - la
 
 def fprime_abr(h_ion, weak_acids_tot, Kas):
+    # 락테이트 추가
     S_cat, S_an, S_IN = weak_acids_tot[:3]
     Kw = Kas[0]
     doh_ion = - Kw / h_ion ** 2
-    dnh3, dhco3, dac, dpro, dbu, dva, dla = - Kas[1:] * weak_acids_tot[2:] / (Kas[1:] + h_ion)**2 #la 포함
-    
-    # 락테이트 포함
+    dnh3, dhco3, dac, dpro, dbu, dva, dla = - Kas[1:] * weak_acids_tot[2:] / (Kas[1:] + h_ion)**2
     return 1 + (-dnh3) - doh_ion - dhco3 - dhco3 - dac - dpro - dbu - dva - dla
 
 def pH_inhibit(pH, ul, ll, lower_only=True):
@@ -263,7 +260,7 @@ def Hill_inhibit(H_ion, ul, ll):
 rhos = np.zeros(26) # 22 kinetic processes + 4 kinetic (uptake la, uptake et, decay la, decay et)
 Cs = np.empty(21) # 락테이트와 에탄올 추가로 19개에서 21개로 됨
 
-def rhos_laetadm1(state_arr, params):
+def rhos_adm1(state_arr, params):
     ks = params['rate_constants']
     Ks = params['half_sat_coeffs']
     cmps = params['components']
@@ -280,6 +277,7 @@ def rhos_laetadm1(state_arr, params):
     kLa = params['kLa']
     T_base = params['T_base']
     root = params['root']
+    
     # 아래에 락테이트 추가
     ## 아래에 왜 X_c4와 같은 요소가 중복으로 추가되어있는지
     # original_Cs_ids = cmps.indices(['S_su, S_aa, S_fa, S_va, S_bu, S_pro, S_ac, S_h2, S_ch4,
@@ -291,12 +289,15 @@ def rhos_laetadm1(state_arr, params):
     
     # laetadm1_state_arr = [S_su, S_aa, S_fa, S_la, S_et, S_va, S_bu, S_pro, S_ac, S_h2, S_ch4, S_IC, S_IN, S_I, X_c, X_ch, 
     # X_pr, X_li, X_su, X_aa, X_fa, X_la, X_et, X_c4, X_pro, X_ac, X_h2, X_I, S_cat, S_an, H2O]
-    
+
+    # Cs_ids = cmps.indices(['X_c', 'X_ch', 'X_pr', 'X_li', 'X_su', 'X_aa',
+    #                        'X_fa', 'X_c4', 'X_c4', 'X_pro', 'X_ac', 'X_h2',
+    #                        'X_su', 'X_aa', 'X_fa', 'X_c4', 'X_pro', 'X_ac', 'X_h2'])
     # Cs = state_arr[Cs_ids]
     Cs[:8] = state_arr[12:20]
     Cs[8:12] = state_arr[19:23]
     Cs[12:] = state_arr[16:23]
-    # substrates_ids = cmps.indices(['S_su', 'S_aa', 'S_fa', 'S_la', 'S_et', 'S_va',
+    # substrates_ids = cmps.indices(['S_su', 'S_aa', 'S_fa', 'S_va',
     #                                'S_bu', 'S_pro', 'S_ac', 'S_h2'])
     # substrates = state_arr[substrates_ids]
     # 락테이트와 에탄올 바이오매스 추가로 8->10
