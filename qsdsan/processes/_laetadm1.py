@@ -185,7 +185,7 @@ def create_laetadm1_cmps(set_thermo=True):
 
     cmps_adm1 = Components([S_su, S_aa, S_fa, S_la, S_et, S_va, S_bu, S_pro, S_ac, S_h2,
                             S_ch4, S_IC, S_IN, S_I, X_c, X_ch, X_pr, X_li,
-                            X_su, X_aa, X_fa, X_c4, X_pro, X_ac, X_h2, X_I,
+                            X_su, X_aa, X_fa, X_la, X_et, X_c4, X_pro, X_ac, X_h2, X_I,
                             S_cat, S_an, cmps_all.H2O])
     cmps_adm1.default_compile()
     if set_thermo: settings.set_thermo(cmps_adm1)
@@ -280,39 +280,43 @@ def rhos_adm1(state_arr, params):
     
     # 아래에 락테이트 추가
     ## 아래에 왜 X_c4와 같은 요소가 중복으로 추가되어있는지
-    # original_Cs_ids = cmps.indices(['S_su, S_aa, S_fa, S_va, S_bu, S_pro, S_ac, S_h2, S_ch4,
-    #                                   S_IC, S_IN, 
-    #                               S_I, X_c, X_ch, X_pr, X_li, X_su, X_aa, X_fa, X_c4, X_pro, X_ac, X_h2, X_I, S_cat, S_an, H2O'])
     # Cs is process, state_arr is list of components
-    # original_state_arr = [S_su, S_aa, S_fa, S_va, S_bu, S_pro, S_ac, S_h2, S_ch4, S_IC, S_IN, 
-    # S_I, X_c, X_ch, X_pr, X_li,  X_su, X_aa, X_fa, X_c4, X_pro, X_ac, X_h2, X_I, S_cat, S_an]
+    # original_state_arr = [S_su:0, S_aa:1, S_fa:2, S_va:3, S_bu:4, S_pro:5, S_ac:6, S_h2:7, S_ch4:8, S_IC:9, S_IN:10, 
+    #                       S_I:11, X_c:12, X_ch:13, X_pr:14, X_li:15,  X_su:16, X_aa:17, X_fa:18, X_c4:19, X_pro:20, X_ac:21,
+    #                       X_h2:22, X_I:23, S_cat:24, S_an:25, H20:26]
     
-    # laetadm1_state_arr = [S_su, S_aa, S_fa, S_la, S_et, S_va, S_bu, S_pro, S_ac, S_h2, S_ch4, S_IC, S_IN, S_I, X_c, X_ch, 
-    # X_pr, X_li, X_su, X_aa, X_fa, X_la, X_et, X_c4, X_pro, X_ac, X_h2, X_I, S_cat, S_an, H2O]
+    # laetadm1_state_arr = [S_su:0, S_aa:1 , S_fa:2, S_la:3, S_et:4, S_va:5, S_bu:6, S_pro:7, S_ac:8, S_h2:9,
+    #                       S_ch4:10, S_IC:11, S_IN:12, S_I:13, X_c:14, X_ch:15, X_pr:16, X_li: 17, X_su:18,
+    #                       X_aa:19, X_fa:20, X_la:21, X_et:22, X_c4:23, X_pro:24, X_ac:25, X_h2:26, X_I:27,
+    #                       S_cat:28, S_an:29, H20:30]
 
-    # Cs_ids = cmps.indices(['X_c', 'X_ch', 'X_pr', 'X_li', 'X_su', 'X_aa',
-    #                        'X_fa', 'X_c4', 'X_c4', 'X_pro', 'X_ac', 'X_h2',
-    #                        'X_su', 'X_aa', 'X_fa', 'X_c4', 'X_pro', 'X_ac', 'X_h2'])
+    # original_Cs_ids = cmps.indices(['X_c', 'X_ch', 'X_pr', 'X_li', 'X_su', 'X_aa',
+    #                                 'X_fa', 'X_c4', 'X_c4', 'X_pro', 'X_ac', 'X_h2',
+    #                                 'X_su', 'X_aa', 'X_fa', 'X_c4', 'X_pro', 'X_ac', 'X_h2'])
+    
+    # laetadm1_Cs_ids = cmps.indices(['X_c', 'X_ch', 'X_pr', 'X_li', 'X_su', 'X_aa', 'X_fa', 'X_la', 'X_et', 'X_c4',/
+    #                                 'X_c4', 'X_pro', 'X_ac', 'X_h2',/ 'X_su', 'X_aa', 'X_fa', 'X_la',
+    #                                 'X_et', 'X_c4', 'X_pro', 'X_ac', 'X_h2'])
     # Cs = state_arr[Cs_ids]
-    Cs[:8] = state_arr[12:20]
-    Cs[8:12] = state_arr[19:23]
-    Cs[12:] = state_arr[16:23]
-    # substrates_ids = cmps.indices(['S_su', 'S_aa', 'S_fa', 'S_va',
-    #                                'S_bu', 'S_pro', 'S_ac', 'S_h2'])
+    Cs[:10] = state_arr[14:24]
+    Cs[10:14] = state_arr[23:27]
+    Cs[14:] = state_arr[18:27]
+    # substrates_ids = cmps.indices(['S_su', 'S_aa', 'S_fa', 'S_la', 'S_et',
+    #                                'S_va', 'S_bu', 'S_pro', 'S_ac', 'S_h2'])
     # substrates = state_arr[substrates_ids]
     # 락테이트와 에탄올 바이오매스 추가로 8->10
     substrates = state_arr[:10]
     # S_va, S_bu, S_h2, S_IN = state_arr[cmps.indices(['S_va', 'S_bu', 'S_h2', 'S_IN'])]
-    # S_va, S_bu, S_h2, S_ch4, S_IC, S_IN = state_arr[[3,4,7,8,9,10]]
-    S_va, S_bu, S_h2, S_IN = state_arr[[3,4,7,10]]
+    # S_va, S_bu, S_h2, S_ch4, S_IC, S_IN = state_arr[[5,6,9,10,11,12]]
+    S_va, S_bu, S_h2, S_IN = state_arr[[5,6,9,12]]
     unit_conversion = mass2mol_conversion(cmps)
-    cmps_in_M = state_arr[:27] * unit_conversion
-    weak_acids = cmps_in_M[[24, 25, 10, 9, 6, 5, 4, 3]]
-
-    T_op = state_arr[-1]
+    cmps_in_M = state_arr[:31] * unit_conversion
+    weak_acids = cmps_in_M[[28, 29, 12, 11, 8, 7, 6, 5, 3]] #S_la:3 추가
+    T_op = state_arr[-1] #cmps 가장 마지막의 H20을 나타냄
     if T_op == T_base:
         Ka = Kab
-        KH = KHb / unit_conversion[7:10]
+        KH = KHb / unit_conversion[9:12] #S_h2:7, S_ch4:8, S_IC:9 in original
+                                         #S_h2:9, S_ch4:10, S_IC:11
     else:
         T_temp = params.pop('T_op', None)
         if T_op == T_temp:
@@ -322,28 +326,29 @@ def rhos_adm1(state_arr, params):
         else:
             params['T_op'] = T_op
             Ka = params['Ka'] = Kab * T_correction_factor(T_base, T_op, Ka_dH)
-            KH = params['KH'] = KHb * T_correction_factor(T_base, T_op, KH_dH) / unit_conversion[7:10]
+            KH = params['KH'] = KHb * T_correction_factor(T_base, T_op, KH_dH) / unit_conversion[9:12]
 
-    biogas_S = state_arr[7:10].copy()
-    biogas_p = R * T_op * state_arr[27:30]
+    biogas_S = state_arr[9:12].copy()
+    biogas_p = R * T_op * state_arr[31:33]
     # Kas = Kab * T_correction_factor(T_base, T_op, Ka_dH)
-    # KH = KHb * T_correction_factor(T_base, T_op, KH_dH) / unit_conversion[7:10]
+    # KH = KHb * T_correction_factor(T_base, T_op, KH_dH) / unit_conversion[9:12]
 
-    rhos[:-3] = ks * Cs
+    rhos[:-3] = ks * Cs #which rhos does it mean?
     Monod = substr_inhibit(substrates, Ks)
-    rhos[4:12] *= Monod
-    if S_va > 0: rhos[7] *= 1/(1+S_bu/S_va)
-    if S_bu > 0: rhos[8] *= 1/(1+S_va/S_bu)
+    rhos[4:14] *= Monod #uptake_la, uptake_et added
+    if S_va > 0: rhos[9] *= 1/(1+S_bu/S_va) #rhos[9]=uptake_va
+    if S_bu > 0: rhos[10] *= 1/(1+S_va/S_bu) #rhos[10]=uptake_bu
 
     h = brenth(acid_base_rxn, 1e-14, 1.0,
             args=(weak_acids, Ka),
             xtol=1e-12, maxiter=100)
     # h = 10**(-7.46)
 
-    nh3 = Ka[1] * weak_acids[2] / (Ka[1] + h)
+    nh3 = Ka[1] * weak_acids[2] / (Ka[1] + h) #Ka[1]이 뭐야?
     co2 = weak_acids[3] - Ka[2] * weak_acids[3] / (Ka[2] + h)
-    biogas_S[-1] = co2 / unit_conversion[9]
+    biogas_S[-1] = co2 / unit_conversion[11] #S_IC=9->S_IC=11
     
+    #Inhibition factors
     Iph = Hill_inhibit(h, pH_ULs, pH_LLs)
     Iin = substr_inhibit(S_IN, KS_IN)
     Ih2 = non_compet_inhibit(S_h2, KIs_h2)
