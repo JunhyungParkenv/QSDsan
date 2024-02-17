@@ -91,7 +91,7 @@ def create_laetadm1_cmps(set_thermo=True):
     S_aa.i_N = 0.007 * N_mw
     S_aa.i_P = 0
     S_aa.i_C = 0.03 * C_mw
-fxgfg
+    
     S_fa = Component.from_chemical('S_fa', chemical='palmitate',
                                     description='Total long-chain fatty acids',
                                     measured_as='COD',
@@ -282,9 +282,16 @@ def rhos_laetadm1(state_arr, params):
     root = params['root']
     # 아래에 락테이트 추가
     ## 아래에 왜 X_c4와 같은 요소가 중복으로 추가되어있는지
-    # Cs_ids = cmps.indices(['X_c', 'X_ch', 'X_pr', 'X_li', 'X_su', 'X_aa',
-    #                        'X_fa', 'X_la', 'X_et', 'X_c4', 'X_c4', 'X_pro', 'X_ac', 'X_h2',
-    #                        'X_su', 'X_aa', 'X_fa', 'X_c4', 'X_pro', 'X_ac', 'X_h2'])
+    # original_Cs_ids = cmps.indices(['S_su, S_aa, S_fa, S_va, S_bu, S_pro, S_ac, S_h2, S_ch4,
+    #                                   S_IC, S_IN, 
+    #                               S_I, X_c, X_ch, X_pr, X_li, X_su, X_aa, X_fa, X_c4, X_pro, X_ac, X_h2, X_I, S_cat, S_an, H2O'])
+    # Cs is process, state_arr is list of components
+    # original_state_arr = [S_su, S_aa, S_fa, S_va, S_bu, S_pro, S_ac, S_h2, S_ch4, S_IC, S_IN, 
+    # S_I, X_c, X_ch, X_pr, X_li,  X_su, X_aa, X_fa, X_c4, X_pro, X_ac, X_h2, X_I, S_cat, S_an]
+    
+    # laetadm1_state_arr = [S_su, S_aa, S_fa, S_la, S_et, S_va, S_bu, S_pro, S_ac, S_h2, S_ch4, S_IC, S_IN, S_I, X_c, X_ch, 
+    # X_pr, X_li, X_su, X_aa, X_fa, X_la, X_et, X_c4, X_pro, X_ac, X_h2, X_I, S_cat, S_an, H2O]
+    
     # Cs = state_arr[Cs_ids]
     Cs[:8] = state_arr[12:20]
     Cs[8:12] = state_arr[19:23]
