@@ -270,9 +270,8 @@ def rhos_adm1(state_arr, params):
     KS_IN = params['KS_IN']
     KI_nh3 = params['KI_nh3']
     KIs_h2 = params['KIs_h2'] #KI_h2_la = params['KI_h2_la']도 포함
-    KI_la_ac = params['KI_la_ac'] #추가(la에 의한 ac변화)
-    KI_ac_h2 = params['KI_ac_h2'] #추가(ac에 의한 h2변화)
-    KI_ac_la = params['KI_ac_la'] #추가(ac에 의한 la변화)
+    #KI_la_ac = params['KI_la_ac'] #추가(la에 의한 ac변화) <-In EthanolX, Ila_ac just defined, not used
+    KIs_ac = params['KI_ac'] #추가(ac에 의한 la or h2변화)
     KHb = params['K_H_base']
     Kab = params['Ka_base']
     KH_dH = params['K_H_dH']
@@ -311,7 +310,7 @@ def rhos_adm1(state_arr, params):
     substrates = state_arr[:10]
     # S_va, S_bu, S_h2, S_IN = state_arr[cmps.indices(['S_va', 'S_bu', 'S_h2', 'S_IN'])]
     # S_va, S_bu, S_h2, S_ch4, S_IC, S_IN = state_arr[[5,6,9,10,11,12]]
-    S_va, S_bu, S_h2, S_IN = state_arr[[5,6,9,12]]
+    S_va, S_bu, S_ac, S_h2, S_IN = state_arr[[5,6, 8, 9,12]] #S_ac = 8 추가
     unit_conversion = mass2mol_conversion(cmps)
     cmps_in_M = state_arr[:31] * unit_conversion
     weak_acids = cmps_in_M[[28, 29, 12, 11, 8, 7, 6, 5, 3]] #S_la:3 추가
@@ -356,19 +355,18 @@ def rhos_adm1(state_arr, params):
     Iin = substr_inhibit(S_IN, KS_IN)
     Ih2 = non_compet_inhibit(S_h2, KIs_h2)
     Inh3 = non_compet_inhibit(nh3, KI_nh3)
-    Ila_ac = substr_inhibit(S_la, KI_la_ac) #Inhibit ac uptake by lac
-    Iac_h2 = substr_inhibit(S_ac, KI_ac_h2) #Inhibit h2 uptake by ac
-    Iac_la = substr_inhibit(S_ac, KI_ac_la) #Inhibit la uptake by ac
-    Ih2_la = substr_inhibit(S_h2, KI_h2_la) #Inhibit la uptake by h2
+    #Ila_ac = non_compet_inhibit(S_la, KI_la_ac) #Inhibit ac uptake by lac <-In EthanolX, Ila_ac just defined, not used
+    Iac = non_compet_inhibit(S_ac, KIs_ac) #Inhibit h2 or la uptake by ac (Iac_h2 or Iac_la)
+    #Ih2_la = non_compet_inhibit(S_h2, KI_h2_la) #Inhibit la uptake by h2
     rhos[4:14] *= Iph * Iin #uptake_la, uptake_et added
-    rhos[6] *= Ih2
-    rhos[7] *= Iac_la * Ih2_la
-    rhos[8:11] *= Ih2
+    rhos[6:11] *= Ih2
+    rhos[7] *= Iac #Ih2_la = Ih2?
     # rhos[4:12] *= Hill_inhibit(h, pH_ULs, pH_LLs) * substr_inhibit(S_IN, KS_IN)
     # rhos[6:10] *= non_compet_inhibit(S_h2, KIs_h2)
     rhos[12] *= Inh3 #rhos[12]=uptake_acetate
+    rhos[13] *= Iac #rhos[13]=uptake_h2
     root.data = {
-        'pH':-np.log10(h), 
+        'pH':-np.log10(h),
         'Iph':Iph, 
         'Ih2':Ih2, 
         'Iin':Iin, 
