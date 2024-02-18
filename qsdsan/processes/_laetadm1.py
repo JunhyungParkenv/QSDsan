@@ -269,7 +269,10 @@ def rhos_adm1(state_arr, params):
     pH_LLs = params['pH_LLs']
     KS_IN = params['KS_IN']
     KI_nh3 = params['KI_nh3']
-    KIs_h2 = params['KIs_h2']
+    KIs_h2 = params['KIs_h2'] #KI_h2_la = params['KI_h2_la']도 포함
+    KI_la_ac = params['KI_la_ac'] #추가(la에 의한 ac변화)
+    KI_ac_h2 = params['KI_ac_h2'] #추가(ac에 의한 h2변화)
+    KI_ac_la = params['KI_ac_la'] #추가(ac에 의한 la변화)
     KHb = params['K_H_base']
     Kab = params['Ka_base']
     KH_dH = params['K_H_dH']
@@ -353,11 +356,17 @@ def rhos_adm1(state_arr, params):
     Iin = substr_inhibit(S_IN, KS_IN)
     Ih2 = non_compet_inhibit(S_h2, KIs_h2)
     Inh3 = non_compet_inhibit(nh3, KI_nh3)
-    rhos[4:12] *= Iph * Iin
-    rhos[6:10] *= Ih2
+    Ila_ac = substr_inhibit(S_la, KI_la_ac) #Inhibit ac uptake by lac
+    Iac_h2 = substr_inhibit(S_ac, KI_ac_h2) #Inhibit h2 uptake by ac
+    Iac_la = substr_inhibit(S_ac, KI_ac_la) #Inhibit la uptake by ac
+    Ih2_la = substr_inhibit(S_h2, KI_h2_la) #Inhibit la uptake by h2
+    rhos[4:14] *= Iph * Iin #uptake_la, uptake_et added
+    rhos[6] *= Ih2
+    rhos[7] *= Iac_la * Ih2_la
+    rhos[8:11] *= Ih2
     # rhos[4:12] *= Hill_inhibit(h, pH_ULs, pH_LLs) * substr_inhibit(S_IN, KS_IN)
     # rhos[6:10] *= non_compet_inhibit(S_h2, KIs_h2)
-    rhos[10] *= Inh3
+    rhos[12] *= Inh3 #rhos[12]=uptake_acetate
     root.data = {
         'pH':-np.log10(h), 
         'Iph':Iph, 
@@ -365,7 +374,7 @@ def rhos_adm1(state_arr, params):
         'Iin':Iin, 
         'Inh3':Inh3,
         'Monod':Monod,
-        'rhos':rhos[4:12].copy()
+        'rhos':rhos[4:14].copy() #uptake_la, uptake_et added
         }
     rhos[-3:] = kLa * (biogas_S - KH * biogas_p)
     # print(rhos)
