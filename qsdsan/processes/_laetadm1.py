@@ -270,8 +270,8 @@ def rhos_adm1(state_arr, params):
     KS_IN = params['KS_IN']
     KI_nh3 = params['KI_nh3']
     KIs_h2 = params['KIs_h2'] #KI_h2_la = params['KI_h2_la']도 포함
-    #KI_la_ac = params['KI_la_ac'] #추가(la에 의한 ac변화) <-In EthanolX, Ila_ac just defined, not used
-    KIs_ac = params['KI_ac'] #추가(ac에 의한 la or h2변화)
+    KIs_la = params['KIs_la'] #추가(KI_la_ac;la에 의한 ac변화) <-In EthanolX, Ila_ac just defined, not used
+    KI_ac = params['KI_ac'] #추가(ac에 의한 la and h2변화)
     KHb = params['K_H_base']
     Kab = params['Ka_base']
     KH_dH = params['K_H_dH']
@@ -310,7 +310,7 @@ def rhos_adm1(state_arr, params):
     substrates = state_arr[:10]
     # S_va, S_bu, S_h2, S_IN = state_arr[cmps.indices(['S_va', 'S_bu', 'S_h2', 'S_IN'])]
     # S_va, S_bu, S_h2, S_ch4, S_IC, S_IN = state_arr[[5,6,9,10,11,12]]
-    S_va, S_bu, S_ac, S_h2, S_IN = state_arr[[5,6, 8, 9,12]] #S_ac = 8 추가
+    S_va, S_bu, S_ac, S_h2, S_IN = state_arr[[5,6,8,9,12]] #S_ac:8 added, why we need to add this?
     unit_conversion = mass2mol_conversion(cmps)
     cmps_in_M = state_arr[:31] * unit_conversion
     weak_acids = cmps_in_M[[28, 29, 12, 11, 8, 7, 6, 5, 3]] #S_la:3 추가
@@ -356,7 +356,7 @@ def rhos_adm1(state_arr, params):
     Ih2 = non_compet_inhibit(S_h2, KIs_h2)
     Inh3 = non_compet_inhibit(nh3, KI_nh3)
     #Ila_ac = non_compet_inhibit(S_la, KI_la_ac) #Inhibit ac uptake by lac <-In EthanolX, Ila_ac just defined, not used
-    Iac = non_compet_inhibit(S_ac, KIs_ac) #Inhibit h2 or la uptake by ac (Iac_h2 or Iac_la)
+    Iac = non_compet_inhibit(S_ac, KI_ac) #Inhibit h2 and la uptake by ac (Iac_h2 or Iac_la)
     #Ih2_la = non_compet_inhibit(S_h2, KI_h2_la) #Inhibit la uptake by h2
     rhos[4:14] *= Iph * Iin #uptake_la, uptake_et added
     rhos[6:11] *= Ih2
@@ -369,8 +369,9 @@ def rhos_adm1(state_arr, params):
         'pH':-np.log10(h),
         'Iph':Iph, 
         'Ih2':Ih2, 
-        'Iin':Iin, 
+        'Iin':Iin,
         'Inh3':Inh3,
+        'Iac':Iac, #Iac 추가
         'Monod':Monod,
         'rhos':rhos[4:14].copy() #uptake_la, uptake_et added
         }
@@ -422,6 +423,10 @@ class ADM1(CompiledProcesses):
     f_fa_li : float, optional
         Fraction of long chain fatty acids (LCFAs) from hydrolysis of lipids
         [kg COD/kg COD]. The default is 0.95.
+    f_la_su : float, optional #added
+        Fraction of lactate from hydrolysis of sugars [kg COD/kg COD]. The default is .
+    f_et_su : float, optional #added
+        Fraction of ethanol from hydrolysis of sugars [kg COD/kg COD]. The default is . 
     f_bu_su : float, optional
         Fraction of butyrate from sugars [kg COD/kg COD]. The default is 0.13.
     f_pro_su : float, optional
@@ -585,23 +590,29 @@ class ADM1(CompiledProcesses):
     .. [2] Rosen, C.; Jeppsson, U. Aspects on ADM1 Implementation within 
         the BSM2 Framework; Lund, 2006.
     """
-
+    #'f_la_su', 'f_et_su', 'f_pro_la', 'f_ac_la', 'f_h2_la', 'f_ac_et', 'f_h2_et', 'Y_la', 'Y_et'added below
     _stoichio_params = ('f_ch_xc', 'f_pr_xc', 'f_li_xc', 'f_xI_xc', 'f_sI_xc',
-                        'f_fa_li', 'f_bu_su', 'f_pro_su', 'f_ac_su', 'f_h2_su',
-                        'f_va_aa', 'f_bu_aa', 'f_pro_aa', 'f_ac_aa', 'f_h2_aa',
-                        'f_ac_fa', 'f_h2_fa', 'f_pro_va', 'f_ac_va', 'f_h2_va',
-                        'f_ac_bu', 'f_h2_bu', 'f_ac_pro', 'f_h2_pro',
-                        'Y_su', 'Y_aa', 'Y_fa', 'Y_c4', 'Y_pro', 'Y_ac', 'Y_h2')
+                        'f_fa_li', 'f_la_su', 'f_et_su', 'f_bu_su', 'f_pro_su',
+                        'f_ac_su', 'f_h2_su', 'f_va_aa', 'f_bu_aa', 'f_pro_aa',
+                        'f_ac_aa', 'f_h2_aa', 'f_ac_fa', 'f_h2_fa', 'f_pro_la',
+                        'f_ac_la', 'f_h2_la', 'f_ac_et', 'f_h2_et', 'f_pro_va',
+                        'f_ac_va', 'f_h2_va', 'f_ac_bu', 'f_h2_bu', 'f_ac_pro',
+                        'f_h2_pro',
+                        'Y_su', 'Y_aa', 'Y_fa', 'Y_la', 'Y_et', 'Y_c4', 'Y_pro', 'Y_ac', 'Y_h2')
+    #'KIs_ac' added below
     _kinetic_params = ('rate_constants', 'half_sat_coeffs', 'pH_ULs', 'pH_LLs',
-                       'KS_IN', 'KI_nh3', 'KIs_h2',
+                       'KS_IN', 'KI_nh3', 'KIs_h2', 'KIs_ac',
                        'Ka_base', 'Ka_dH', 'K_H_base', 'K_H_dH', 'kLa',
                        'T_base', 'components', 'root')
+    #'HLa', 'La-' added
     _acid_base_pairs = (('H+', 'OH-'), ('NH4+', 'NH3'), ('CO2', 'HCO3-'),
                         ('HAc', 'Ac-'), ('HPr', 'Pr-'),
-                        ('HBu', 'Bu-'), ('HVa', 'Va-'))
+                        ('HBu', 'Bu-'), ('HVa', 'Va-'), ('HLa', 'La-'))
     _biogas_IDs = ('S_h2', 'S_ch4', 'S_IC')
-    _biomass_IDs = ('X_su', 'X_aa', 'X_fa', 'X_c4', 'X_pro', 'X_ac', 'X_h2')
-
+    #X_la, X_et added below
+    _biomass_IDs = ('X_su', 'X_aa', 'X_fa', 'X_la', 'X_et', 'X_c4', 'X_pro', 'X_ac', 'X_h2')
+    
+    '''
     def __new__(cls, components=None, path=None, N_xc=2.686e-3, N_I=4.286e-3, N_aa=7e-3,
                 f_ch_xc=0.2, f_pr_xc=0.2, f_li_xc=0.3, f_xI_xc=0.2,
                 f_fa_li=0.95, f_bu_su=0.13, f_pro_su=0.27, f_ac_su=0.41,
@@ -619,7 +630,29 @@ class ADM1(CompiledProcesses):
                 kLa=200, K_H_base=[7.8e-4, 1.4e-3, 3.5e-2],
                 K_H_dH=[-4180, -14240, -19410],
                 **kwargs):
-        
+    '''
+    #why f_h2_su not include below?
+    #f_la_su, f_et_su, f_pro_la, f_ac_la,  f_ac_et, Y_la, Y_et added with valued randomly below
+    def __new__(cls, components=None, path=None, N_xc=2.686e-3, N_I=4.286e-3, N_aa=7e-3,
+                f_ch_xc=0.2, f_pr_xc=0.2, f_li_xc=0.3, f_xI_xc=0.2,
+                f_fa_li=0.95, f_la_su=0.233, f_et_su= 0.004, f_bu_su=0.13, f_pro_su=0.037,
+                f_ac_su=0.41, f_va_aa=0.23, f_bu_aa=0.26, f_pro_aa=0.05, f_ac_aa=0.4,
+                f_ac_fa=0.7, f_pro_la=0.33, f_ac_la=0.33, f_ac_et=0.5, f_pro_va=0.54,
+                f_ac_va=0.31, f_ac_bu=0.8, f_ac_pro=0.57,
+                Y_su=0.1, Y_aa=0.08, Y_fa=0.06, Y_la=0.06, Y_et=0.04, Y_c4=0.06, Y_pro=0.04, Y_ac=0.05, Y_h2=0.06,
+                q_dis=0.5, q_ch_hyd=10, q_pr_hyd=10, q_li_hyd=10,
+                k_su=30, k_aa=50, k_fa=6, k_la=5, k_et=6.41, k_c4=20, k_pro=13, k_ac=8, k_h2=35,
+                K_su=0.5, K_aa=0.3, K_fa=0.4, K_la=0.25, K_et=0.91, K_c4=0.2, K_pro=0.1, K_ac=0.15, K_h2=7e-6,
+                b_su=0.02, b_aa=0.02, b_fa=0.02, b_la=0.02, b_et=0.02, b_c4=0.02, b_pro=0.02, b_ac=0.02, b_h2=0.02,
+                KI_h2_fa=5e-6, KI_h2_c4=1e-5, KI_h2_pro=3.5e-6, KI_h2_la=3e-4, KI_nh3=1.8e-3, KS_IN=1e-4,
+                KI_la_ac=12, KI_ac=0.01,
+                pH_limits_aa=(4,5.5), pH_limits_ac=(6,7), pH_limits_h2=(5,6),
+                T_base=298.15, pKa_base=[14, 9.25, 6.35, 4.76, 4.88, 4.82, 4.86, 3.85],
+                Ka_dH=[55900, 51965, 7646, 0, 0, 0, 0, 0],
+                kLa=200, K_H_base=[7.8e-4, 1.4e-3, 3.5e-2],
+                K_H_dH=[-4180, -14240, -19410],
+                **kwargs):
+      
         cmps = _load_components(components)
         cmps.X_c.i_N = N_xc * N_mw
         cmps.X_I.i_N = cmps.S_I.i_N = N_I * N_mw
