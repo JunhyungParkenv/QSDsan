@@ -22,7 +22,7 @@ from qsdsan.utils import ospath, data_path
 from scipy.optimize import brenth
 from warnings import warn
 
-__all__ = ('create_laetadm1_cmps', 'ADM1',
+__all__ = ('create_laetadm1_cmps', 'laetADM1',
            'non_compet_inhibit', 'substr_inhibit',
            'T_correction_factor', 
            'pH_inhibit', 'Hill_inhibit', 
@@ -33,7 +33,7 @@ _load_components = settings.get_default_chemicals
 
 #%%
 # =============================================================================
-# ADM1-specific components
+# laetADM1-specific components
 # =============================================================================
 
 C_mw = get_mw({'C':1})
@@ -398,7 +398,7 @@ class TempState:
     #     self.data += [value]
 
 @chemicals_user
-class ADM1(CompiledProcesses):
+class laetADM1(CompiledProcesses):
     """
     Anaerobic Digestion Model No.1. [1]_, [2]_
 
@@ -711,6 +711,7 @@ class ADM1(CompiledProcesses):
                        b_su, b_aa, b_fa, b_la, b_et, b_c4, b_pro, b_ac, b_h2))
         Ks = np.array((K_su, K_aa, K_fa, K_la, K_et, K_c4, K_c4, K_pro, K_ac, K_h2))
         KIs_h2 = np.array((KI_h2_fa, KI_h2_c4, KI_h2_c4, KI_h2_pro))
+        KI_ac = np.array(KI_ac)
         K_H_base = np.array(K_H_base)
         K_H_dH = np.array(K_H_dH)
         Ka_base = np.array([10**(-pKa) for pKa in pKa_base])
