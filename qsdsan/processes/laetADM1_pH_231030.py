@@ -17,7 +17,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)        # to ignor
 
 #%%
 # Components
-cmps = pc.create_adm1_laet_cmps()       # create state variables for laetADM1
+cmps = pc.create_adm1_laet_cmps()      # create state variables for laetADM1
 cmps.show()                            # 26 components in ADM1 + water
 
 #%%
