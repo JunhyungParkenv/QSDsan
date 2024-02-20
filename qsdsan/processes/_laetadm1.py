@@ -26,7 +26,7 @@ __all__ = ('create_laetadm1_cmps', 'ADM1',
            'non_compet_inhibit', 'substr_inhibit',
            'T_correction_factor', 
            'pH_inhibit', 'Hill_inhibit', 
-           'rhos_adm1')
+           'rhos_laetadm1')
 
 _path = ospath.join(data_path, 'process_data/_laetadm1.tsv')
 _load_components = settings.get_default_chemicals
@@ -257,10 +257,10 @@ def Hill_inhibit(H_ion, ul, ll):
     K = 10**(-(ul+ll)/2)
     return 1/(1+(H_ion/K) ** n)
 
-rhos = np.zeros(26) # 22 kinetic processes + 4 kinetic (uptake la, uptake et, decay la, decay et)
+rhos = np.zeros(26) # 22 kinetic processes(3 for gases) + 4 kinetic (uptake la, uptake et, decay la, decay et)
 Cs = np.empty(21) # 락테이트와 에탄올 추가로 19개에서 21개로 됨
 
-def rhos_adm1(state_arr, params):
+def rhos_laetadm1(state_arr, params):
     ks = params['rate_constants']
     Ks = params['half_sat_coeffs']
     cmps = params['components']
@@ -332,6 +332,13 @@ def rhos_adm1(state_arr, params):
 
     biogas_S = state_arr[9:12].copy()
     biogas_p = R * T_op * state_arr[31:33]
+    #Specific definition
+    biogas_p_h2 = R * T_op * state_arr[31]
+    root.data['biogas_p_h2'] = biogas_p_h2 #추후 사용
+    biogas_p_ch4 = R * T_op * state_arr[32]
+    root.data['biogas_p_ch4'] = biogas_p_ch4 #추후 사용
+    biogas_p_IC = R * T_op * state_arr[33]
+    root.data['biogas_p_IC'] = biogas_p_IC #추후 사용
     # Kas = Kab * T_correction_factor(T_base, T_op, Ka_dH)
     # KH = KHb * T_correction_factor(T_base, T_op, KH_dH) / unit_conversion[9:12]
 
@@ -375,7 +382,7 @@ def rhos_adm1(state_arr, params):
         'Monod':Monod,
         'rhos':rhos[4:14].copy() #uptake_la, uptake_et added
         }
-    rhos[-3:] = kLa * (biogas_S - KH * biogas_p)
+    rhos[-3:] = kLa * (biogas_S - KH * biogas_p) #biogas_p:partial pressure(bar)
     # print(rhos)
     return rhos
 
@@ -601,7 +608,7 @@ class ADM1(CompiledProcesses):
                         'Y_su', 'Y_aa', 'Y_fa', 'Y_la', 'Y_et', 'Y_c4', 'Y_pro', 'Y_ac', 'Y_h2')
     #'KIs_ac' added below
     _kinetic_params = ('rate_constants', 'half_sat_coeffs', 'pH_ULs', 'pH_LLs',
-                       'KS_IN', 'KI_nh3', 'KIs_h2', 'KIs_ac',
+                       'KS_IN', 'KI_nh3', 'KIs_h2', 'KI_ac',
                        'Ka_base', 'Ka_dH', 'K_H_base', 'K_H_dH', 'kLa',
                        'T_base', 'components', 'root')
     #'HLa', 'La-' added
@@ -638,7 +645,7 @@ class ADM1(CompiledProcesses):
                 f_fa_li=0.95, f_la_su=0.233, f_et_su= 0.004, f_bu_su=0.13, f_pro_su=0.037,
                 f_ac_su=0.41, f_va_aa=0.23, f_bu_aa=0.26, f_pro_aa=0.05, f_ac_aa=0.4,
                 f_ac_fa=0.7, f_pro_la=0.33, f_ac_la=0.33, f_ac_et=0.5, f_pro_va=0.54,
-                f_ac_va=0.31, f_ac_bu=0.8, f_ac_pro=0.57,
+                f_ac_va=0.31, f_ac_bu=0.8, f_ac_pro=0.57, f_pro_h2=0.05,
                 Y_su=0.1, Y_aa=0.08, Y_fa=0.06, Y_la=0.06, Y_et=0.04, Y_c4=0.06, Y_pro=0.04, Y_ac=0.05, Y_h2=0.06,
                 q_dis=0.5, q_ch_hyd=10, q_pr_hyd=10, q_li_hyd=10,
                 k_su=30, k_aa=50, k_fa=6, k_la=5, k_et=6.41, k_c4=20, k_pro=13, k_ac=8, k_h2=35,
@@ -675,19 +682,34 @@ class ADM1(CompiledProcesses):
             gas_transfer.append(new_p)
         self.extend(gas_transfer)
         self.compile(to_class=cls)
-
+        # add equation for additional f below
+        f_pro_h2 = [(1-Y_aa)*f_pro_la]*(16/96)
+        root = TempState()
+        biogas_p_h2 = root.data.get('biogas_p_h2', 0)  # 기본값 0 설정
+        f_la_su = biogas_p_h2 / (5e-4 + biogas_p_h2) if biogas_p_h2 else 0
+        f_bu_su = 0.83 * 5e-4 / (5e-4 + biogas_p_h2) * biogas_p_h2 / (2e-3 + biogas_p_h2) if biogas_p_h2 else 0
+        f_ac_su = 0.5 * 5e-4 / (5e-4 + biogas_p_h2) * 2e-3 / (2e-3 + biogas_p_h2)
+        f_pro_la = biogas_p_h2 / (2e-3 + biogas_p_h2)
+        f_ac_la = 0.67 * 2e-3 / (2e-3 + biogas_p_h2)
+        #f_h2_su = [0.17 * 5e-4 / (5e-4 + biogas_p_h2) * biogas_p_h2] + [0.5 * 5e-4 / (5e-4 + biogas_p_h2) * 2e-3 / (2e-3 + biogas_p_h2)]
+        #f_h2_la = 0.33 * 2e-3 / (2e-3 + biogas_p_h2)
         stoichio_vals = (f_ch_xc, f_pr_xc, f_li_xc, f_xI_xc, 1-f_ch_xc-f_pr_xc-f_li_xc-f_xI_xc,
-                         f_fa_li, f_bu_su, f_pro_su, f_ac_su, 1-f_bu_su-f_pro_su-f_ac_su,
+                         f_fa_li, f_la_su, f_et_su, f_bu_su, f_pro_su, f_ac_su, 1-f_la_su-f_et_su-f_bu_su-f_pro_su-f_ac_su,
                          f_va_aa, f_bu_aa, f_pro_aa, f_ac_aa, 1-f_va_aa-f_bu_aa-f_pro_aa-f_ac_aa,
-                         f_ac_fa, 1-f_ac_fa, f_pro_va, f_ac_va, 1-f_pro_va-f_ac_va,
+                         f_ac_fa, 1-f_ac_fa,
+                         f_pro_la, f_ac_la, 1-f_pro_la-f_ac_la,
+                         f_ac_et, 1-f_ac_et,
+                         f_pro_va, f_ac_va, 1-f_pro_va-f_ac_va,
                          f_ac_bu, 1-f_ac_bu, f_ac_pro, 1-f_ac_pro,
-                         Y_su, Y_aa, Y_fa, Y_c4, Y_pro, Y_ac, Y_h2)
+                         f_pro_h2,
+                         Y_su, Y_aa, Y_fa, Y_la, Y_et, Y_c4, Y_pro, Y_ac, Y_h2)
+        #Above, how to put f_pro_h2, 1-Y_h2-f_pro_h2?
         pH_LLs = np.array([pH_limits_aa[0]]*6 + [pH_limits_ac[0], pH_limits_h2[0]])
         pH_ULs = np.array([pH_limits_aa[1]]*6 + [pH_limits_ac[1], pH_limits_h2[1]])
         ks = np.array((q_dis, q_ch_hyd, q_pr_hyd, q_li_hyd,
-                       k_su, k_aa, k_fa, k_c4, k_c4, k_pro, k_ac, k_h2,
-                       b_su, b_aa, b_fa, b_c4, b_pro, b_ac, b_h2))
-        Ks = np.array((K_su, K_aa, K_fa, K_c4, K_c4, K_pro, K_ac, K_h2))
+                       k_su, k_aa, k_fa, k_la, k_et, k_c4, k_c4, k_pro, k_ac, k_h2,
+                       b_su, b_aa, b_fa, b_la, b_et, b_c4, b_pro, b_ac, b_h2))
+        Ks = np.array((K_su, K_aa, K_fa, K_la, K_et, K_c4, K_c4, K_pro, K_ac, K_h2))
         KIs_h2 = np.array((KI_h2_fa, KI_h2_c4, KI_h2_c4, KI_h2_pro))
         K_H_base = np.array(K_H_base)
         K_H_dH = np.array(K_H_dH)
@@ -697,11 +719,11 @@ class ADM1(CompiledProcesses):
         dct = self.__dict__
         dct.update(kwargs)
 
-        self.set_rate_function(rhos_adm1)
+        self.set_rate_function(rhos_laetadm1)
         dct['_parameters'] = dict(zip(cls._stoichio_params, stoichio_vals))
         self.rate_function._params = dict(zip(cls._kinetic_params,
                                               [ks, Ks, pH_ULs, pH_LLs, KS_IN*N_mw,
-                                               KI_nh3, KIs_h2, Ka_base, Ka_dH,
+                                               KI_nh3, KIs_h2, KI_ac, Ka_base, Ka_dH,
                                                K_H_base, K_H_dH, kLa,
                                                T_base, self._components, root]))
 
