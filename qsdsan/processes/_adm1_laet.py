@@ -22,24 +22,24 @@ from qsdsan.utils import ospath, data_path
 from scipy.optimize import brenth
 from warnings import warn
 
-__all__ = ('create_laetadm1_cmps', 'laetADM1',
+__all__ = ('create_adm1_laet_cmps', 'ADM1_laet',
            'non_compet_inhibit', 'substr_inhibit',
            'T_correction_factor', 
            'pH_inhibit', 'Hill_inhibit', 
-           'rhos_laetadm1')
+           'rhos_adm1_laet')
 
-_path = ospath.join(data_path, 'process_data/_laetadm1.tsv')
+_path = ospath.join(data_path, 'process_data/_adm1_laet.tsv')
 _load_components = settings.get_default_chemicals
 
 #%%
 # =============================================================================
-# laetADM1-specific components
+# ADM1_laet-specific components
 # =============================================================================
 
 C_mw = get_mw({'C':1})
 N_mw = get_mw({'N':1})
 
-def create_laetadm1_cmps(set_thermo=True):
+def create_adm1_laet_cmps(set_thermo=True):
     cmps_all = Components.load_default()
 
     # varies
@@ -183,13 +183,13 @@ def create_laetadm1_cmps(set_thermo=True):
     S_an = cmps_all.S_AN.copy('S_an')
     S_cat.i_mass = S_an.i_mass = 1
 
-    cmps_laetadm1 = Components([S_su, S_aa, S_fa, S_la, S_et, S_va, S_bu, S_pro, S_ac, S_h2,
+    cmps_adm1_laet = Components([S_su, S_aa, S_fa, S_la, S_et, S_va, S_bu, S_pro, S_ac, S_h2,
                             S_ch4, S_IC, S_IN, S_I, X_c, X_ch, X_pr, X_li,
                             X_su, X_aa, X_fa, X_la, X_et, X_c4, X_pro, X_ac, X_h2, X_I,
                             S_cat, S_an, cmps_all.H2O])
-    cmps_laetadm1.default_compile()
-    if set_thermo: settings.set_thermo(cmps_laetadm1)
-    return cmps_laetadm1
+    cmps_adm1_laet.default_compile()
+    if set_thermo: settings.set_thermo(cmps_adm1_laet)
+    return cmps_adm1_laet
 
 # create_adm1_cmps()
 
@@ -260,7 +260,7 @@ def Hill_inhibit(H_ion, ul, ll):
 rhos = np.zeros(26) # 22 kinetic processes(3 for gases) + 4 kinetic (uptake la, uptake et, decay la, decay et)
 Cs = np.empty(21) # 락테이트와 에탄올 추가로 19개에서 21개로 됨
 
-def rhos_laetadm1(state_arr, params):
+def rhos_adm1_laet(state_arr, params):
     ks = params['rate_constants']
     Ks = params['half_sat_coeffs']
     cmps = params['components']
@@ -287,7 +287,7 @@ def rhos_laetadm1(state_arr, params):
     #                       S_I:11, X_c:12, X_ch:13, X_pr:14, X_li:15,  X_su:16, X_aa:17, X_fa:18, X_c4:19, X_pro:20, X_ac:21,
     #                       X_h2:22, X_I:23, S_cat:24, S_an:25, H20:26]
     
-    # laetadm1_state_arr = [S_su:0, S_aa:1 , S_fa:2, S_la:3, S_et:4, S_va:5, S_bu:6, S_pro:7, S_ac:8, S_h2:9,
+    # adm1_laet_state_arr = [S_su:0, S_aa:1 , S_fa:2, S_la:3, S_et:4, S_va:5, S_bu:6, S_pro:7, S_ac:8, S_h2:9,
     #                       S_ch4:10, S_IC:11, S_IN:12, S_I:13, X_c:14, X_ch:15, X_pr:16, X_li: 17, X_su:18,
     #                       X_aa:19, X_fa:20, X_la:21, X_et:22, X_c4:23, X_pro:24, X_ac:25, X_h2:26, X_I:27,
     #                       S_cat:28, S_an:29, H20:30]
@@ -296,7 +296,7 @@ def rhos_laetadm1(state_arr, params):
     #                                 'X_fa', 'X_c4', 'X_c4', 'X_pro', 'X_ac', 'X_h2',
     #                                 'X_su', 'X_aa', 'X_fa', 'X_c4', 'X_pro', 'X_ac', 'X_h2'])
     
-    # laetadm1_Cs_ids = cmps.indices(['X_c', 'X_ch', 'X_pr', 'X_li', 'X_su', 'X_aa', 'X_fa', 'X_la', 'X_et', 'X_c4',/
+    # adm1_laet_Cs_ids = cmps.indices(['X_c', 'X_ch', 'X_pr', 'X_li', 'X_su', 'X_aa', 'X_fa', 'X_la', 'X_et', 'X_c4',/
     #                                 'X_c4', 'X_pro', 'X_ac', 'X_h2',/ 'X_su', 'X_aa', 'X_fa', 'X_la',
     #                                 'X_et', 'X_c4', 'X_pro', 'X_ac', 'X_h2'])
     # Cs = state_arr[Cs_ids]
@@ -398,7 +398,7 @@ class TempState:
     #     self.data += [value]
 
 @chemicals_user
-class laetADM1(CompiledProcesses):
+class ADM1_laet(CompiledProcesses):
     """
     Anaerobic Digestion Model No.1. [1]_, [2]_
 
@@ -720,7 +720,7 @@ class laetADM1(CompiledProcesses):
         dct = self.__dict__
         dct.update(kwargs)
 
-        self.set_rate_function(rhos_laetadm1)
+        self.set_rate_function(rhos_adm1_laet)
         dct['_parameters'] = dict(zip(cls._stoichio_params, stoichio_vals))
         self.rate_function._params = dict(zip(cls._kinetic_params,
                                               [ks, Ks, pH_ULs, pH_LLs, KS_IN*N_mw,
