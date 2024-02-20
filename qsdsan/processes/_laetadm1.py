@@ -183,13 +183,13 @@ def create_laetadm1_cmps(set_thermo=True):
     S_an = cmps_all.S_AN.copy('S_an')
     S_cat.i_mass = S_an.i_mass = 1
 
-    cmps_adm1 = Components([S_su, S_aa, S_fa, S_la, S_et, S_va, S_bu, S_pro, S_ac, S_h2,
+    cmps_laetadm1 = Components([S_su, S_aa, S_fa, S_la, S_et, S_va, S_bu, S_pro, S_ac, S_h2,
                             S_ch4, S_IC, S_IN, S_I, X_c, X_ch, X_pr, X_li,
                             X_su, X_aa, X_fa, X_la, X_et, X_c4, X_pro, X_ac, X_h2, X_I,
                             S_cat, S_an, cmps_all.H2O])
-    cmps_adm1.default_compile()
-    if set_thermo: settings.set_thermo(cmps_adm1)
-    return cmps_adm1
+    cmps_laetadm1.default_compile()
+    if set_thermo: settings.set_thermo(cmps_laetadm1)
+    return cmps_laetadm1
 
 # create_adm1_cmps()
 
